@@ -58,7 +58,7 @@ function startGame(){
     ]
 
     confirmedSockets.forEach(socket => {
-        socket.on('play', (move: { row: number; col: number; }, callback: (res: string)=>void )=>{
+        socket.on('play', (move: { row: number; col: number; })=>{
             if(confirmedSockets[turn].id != socket.id){
                 return;
             }

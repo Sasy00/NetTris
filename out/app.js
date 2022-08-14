@@ -50,7 +50,7 @@ function startGame() {
         [0, 0, 0]
     ];
     confirmedSockets.forEach(socket => {
-        socket.on('play', (move, callback) => {
+        socket.on('play', (move) => {
             if (confirmedSockets[turn].id != socket.id) {
                 return;
             }
