@@ -42,27 +42,131 @@ io.on('connection', (socket) => {
         confirmedSockets = confirmedSockets.filter((v, _) => v.id != socket.id);
     });
 });
+var Result;
+(function (Result) {
+    Result[Result["WIN"] = 0] = "WIN";
+    Result[Result["DRAW"] = 1] = "DRAW";
+    Result[Result["CONTINUE"] = 2] = "CONTINUE";
+})(Result || (Result = {}));
+class Game {
+    constructor() {
+        this.moveCount = 0;
+        this.grid = [
+            [0, 0, 0],
+            [0, 0, 0],
+            [0, 0, 0]
+        ];
+    }
+    isValidMove(row, col) {
+        if (row < 0 || row > 2 || col < 0 || col > 2) {
+            return false;
+        }
+        if (this.grid[row][col] !== 0) {
+            return false;
+        }
+        return true;
+    }
+    /**
+     *
+     * @returns 1 or 2
+     */
+    turn() { return (this.moveCount % 2) + 1; }
+    /**
+     *
+     * @param row row of the move
+     * @param col column of the move
+     * @returns true if the move is winning, false otherwise.
+     * If this function returns true you can get the winner with this.turn;
+     */
+    playMove(row, col) {
+        const s = this.turn();
+        this.grid[row][col] = s;
+        //check if winning
+        //check column
+        for (let i = 0; i < 3; ++i) {
+            if (this.grid[row][i] !== s) {
+                break;
+            }
+            if (i == 2) {
+                return Result.WIN;
+            }
+        }
+        for (let i = 0; i < 3; ++i) {
+            if (this.grid[i][col] !== s) {
+                break;
+            }
+            if (i == 2) {
+                return Result.WIN;
+            }
+        }
+        //check diagonal
+        if (row === col) {
+            //inside primary diagonal
+            for (let i = 0; i < 3; ++i) {
+                if (this.grid[i][i] !== s) {
+                    break;
+                }
+                if (i == 2) {
+                    return Result.WIN;
+                }
+            }
+        }
+        if (row + col === 2) {
+            //inside anti diagonal
+            for (let i = 0; i < 3; ++i) {
+                if (this.grid[i][2 - i] !== s) {
+                    break;
+                }
+                if (i == 2) {
+                    return Result.WIN;
+                }
+            }
+        }
+        if (this.moveCount + 1 == 9) {
+            return Result.DRAW;
+        }
+        this.moveCount++;
+        return Result.CONTINUE;
+    }
+}
 function startGame() {
-    var turn = 0;
-    var grid = [
-        [0, 0, 0],
-        [0, 0, 0],
-        [0, 0, 0]
-    ];
+    const game = new Game;
+    console.log(`${confirmedSockets.map(socket => socket.id)}`);
     confirmedSockets.forEach(socket => {
         socket.on('play', (move) => {
-            if (confirmedSockets[turn].id != socket.id) {
+            console.log(`[${socket.id}] move`);
+            console.log(`[ ${game.grid} ], [${game.turn()}]`);
+            if (confirmedSockets[game.turn() - 1].id != socket.id) {
+                console.log(`not your turn`);
                 return;
             }
             const { row, col } = move;
-            if (grid[row][col] != 0) {
+            console.log(`[${row}, ${col}]`);
+            if (!game.isValidMove(row, col)) {
+                console.log('move not valid');
                 return;
             }
-            grid[row][col] = turn + 1;
+            const result = game.playMove(row, col);
             confirmedSockets.forEach(socket => {
-                socket.emit('updateState', { grid: grid });
+                socket.emit('updateState', { grid: game.grid });
             });
-            turn = (turn + 1) % 2;
+            if (result === Result.DRAW) {
+                confirmedSockets.forEach(socket => {
+                    socket.emit('result', 'Draw!');
+                    socket.removeAllListeners('play');
+                });
+            }
+            if (result === Result.WIN) {
+                confirmedSockets.forEach(socket => {
+                    if (socket.id === confirmedSockets[game.turn() - 1].id) {
+                        socket.emit('result', 'You Win!');
+                    }
+                    else {
+                        socket.emit('result', 'You Lose.');
+                    }
+                    socket.removeAllListeners('play');
+                });
+            }
         });
     });
 }

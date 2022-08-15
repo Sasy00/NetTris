@@ -27,6 +27,10 @@ window.onload = () => {
         drawGrid(ctx, grid);
     })
 
+    socket.on('result', (result)=>{
+        console.log(result);
+    })
+
     socket.emit('ready', (sign)=>{
         switch(sign){
             case 'X':
