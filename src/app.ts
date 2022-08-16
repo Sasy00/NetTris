@@ -83,7 +83,7 @@ class Game{
      * 
      * @returns 1 or 2
      */
-    turn() { return (this.moveCount % 2) + 1}
+    turn(): 1 | 2 { return (this.moveCount % 2) == 0 ? 1 : 2 }
 
     /**
      * 
@@ -155,14 +155,14 @@ function startGame(){
     console.log(`${confirmedSockets.map(socket => socket.id)}`);
     confirmedSockets.forEach(socket => {
         socket.on('play', (move: { row: number; col: number; })=>{
-            console.log(`[${socket.id}] move`);
+            console.log(`[ ${socket.id} ] move`);
             console.log(`[ ${game.grid} ], [${game.turn()}]`)
             if(confirmedSockets[game.turn() - 1].id != socket.id){
                 console.log(`not your turn`);
                 return;
             }
             const {row, col} = move;
-            console.log(`[${row}, ${col}]`);
+            console.log(`[ ${row}, ${col} ]`);
             if( !game.isValidMove(row, col) ){
                 console.log('move not valid');
                 return;
