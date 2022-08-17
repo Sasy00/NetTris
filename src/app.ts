@@ -2,7 +2,7 @@ import http = require("http");
 import express = require("express");
 import path = require("path");
 import { Server } from "socket.io";
-import { isShorthandPropertyAssignment } from "typescript";
+import Tris = require("./Tris");
 
 const PORT = process.env.PORT || 3000;
 const app = express();
@@ -49,138 +49,39 @@ io.on('connection', (socket) =>{
     });
 })
 
-enum Result{
-    WIN,
-    DRAW,
-    CONTINUE
-}
-
-class Game{
-    //either 0 or 1
-    
-    moveCount : number;      
-    grid : number[][];
-
-    constructor(){
-        this.moveCount = 0;
-        this.grid = [
-            [0,0,0],
-            [0,0,0],
-            [0,0,0]
-        ]
-    }
-
-    isValidMove(row:number, col:number):boolean{
-        if(row < 0 || row > 2 || col < 0 || col > 2){
-            return false;
-        }
-        if(this.grid[row][col] !== 0){
-            return false;
-        }
-        return true;
-    }
-    /**
-     * 
-     * @returns 1 or 2
-     */
-    turn(): 1 | 2 { return (this.moveCount % 2) == 0 ? 1 : 2 }
-
-    /**
-     * 
-     * @param row row of the move
-     * @param col column of the move
-     * @returns true if the move is winning, false otherwise. 
-     * If this function returns true you can get the winner with this.turn;
-     */
-    playMove(row:number, col:number):Result{
-        const s = this.turn();
-        this.grid[row][col] = s;
-        
-        //check if winning
-        //check column
-        for(let i = 0; i < 3; ++i){
-            if(this.grid[row][i] !== s){
-                break;
-            }
-            if(i == 2){
-                return Result.WIN;
-            }
-        }
-
-        for(let i = 0; i < 3; ++i){
-            if(this.grid[i][col] !== s){
-                break;
-            }
-            if(i == 2){
-                return Result.WIN;
-            }
-        }
-
-        //check diagonal
-        if(row === col){
-            //inside primary diagonal
-            for(let i = 0; i < 3; ++i){
-                if(this.grid[i][i] !== s){
-                    break;
-                }
-                if(i == 2){
-                    return Result.WIN;
-                }
-            }
-        }
-
-        if(row + col === 2){
-            //inside anti diagonal
-            for(let i = 0; i < 3; ++i){
-                if(this.grid[i][2 - i] !== s){
-                    break;
-                }
-                if(i == 2){
-                    return Result.WIN;
-                }
-            }
-        }
-
-        if(this.moveCount + 1 == 9){
-            return Result.DRAW;
-        }
-
-        this.moveCount++;
-        return Result.CONTINUE;
-    }
-}
 
 function startGame(){
-    const game = new Game;
+    let game = Tris.InitTrisGamestate();
     console.log(`${confirmedSockets.map(socket => socket.id)}`);
     confirmedSockets.forEach(socket => {
         socket.on('play', (move: { row: number; col: number; })=>{
             console.log(`[ ${socket.id} ] move`);
-            console.log(`[ ${game.grid} ], [${game.turn()}]`)
-            if(confirmedSockets[game.turn() - 1].id != socket.id){
+            console.log(`[ ${game.grid} ], [${Tris.turn(game)}]`)
+            if(confirmedSockets[Tris.turn(game) - 1].id != socket.id){
                 console.log(`not your turn`);
                 return;
             }
             const {row, col} = move;
             console.log(`[ ${row}, ${col} ]`);
-            if( !game.isValidMove(row, col) ){
+            if( !Tris.isValidMove(game, row, col) ){
                 console.log('move not valid');
                 return;
             } 
-            const result : Result = game.playMove(row, col);
+            const [newGame, result] = Tris.playMove(game, row, col);
+            game = newGame; //side effect
             confirmedSockets.forEach(socket => {
                 socket.emit('updateState', {grid: game.grid});
             });
 
-            if(result === Result.DRAW){
+            if(result === Tris.Result.DRAW){
                 confirmedSockets.forEach(socket =>{
                     socket.emit('result', 'Draw!');
                     socket.removeAllListeners('play');
                 })
             }
-            if(result === Result.WIN){
+            if(result === Tris.Result.WIN){
                 confirmedSockets.forEach(socket =>{
-                    if(socket.id === confirmedSockets[game.turn() - 1].id){
+                    if(socket.id === confirmedSockets[Tris.turn(game) - 1].id){
                         socket.emit('result', 'You Win!');
                     }else{
                         socket.emit('result', 'You Lose.');
