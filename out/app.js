@@ -34,7 +34,8 @@ io.on('connection', (socket) => {
             confirmedSockets.push(socket);
             callback('O');
             console.log(`socket ${socket.id} is player O`);
-            startGame();
+            startGame(confirmedSockets.map(v => v));
+            confirmedSockets = [];
         }
     });
     socket.on("disconnect", (reason) => {
@@ -43,14 +44,14 @@ io.on('connection', (socket) => {
         confirmedSockets = confirmedSockets.filter((v, _) => v.id != socket.id);
     });
 });
-function startGame() {
+function startGame(players) {
     let game = Tris.InitTrisGamestate();
-    console.log(`${confirmedSockets.map(socket => socket.id)}`);
-    confirmedSockets.forEach(socket => {
+    console.log(`${players.map(socket => socket.id)}`);
+    players.forEach(socket => {
         socket.on('play', (move) => {
             console.log(`[ ${socket.id} ] move`);
             console.log(`[ ${game.grid} ], [${Tris.turn(game)}]`);
-            if (confirmedSockets[Tris.turn(game) - 1].id != socket.id) {
+            if (players[Tris.turn(game) - 1].id != socket.id) {
                 console.log(`not your turn`);
                 return;
             }
@@ -62,18 +63,18 @@ function startGame() {
             }
             const [newGame, result] = Tris.playMove(game, row, col);
             game = newGame; //side effect
-            confirmedSockets.forEach(socket => {
+            players.forEach(socket => {
                 socket.emit('updateState', { grid: game.grid });
             });
             if (result === Tris.Result.DRAW) {
-                confirmedSockets.forEach(socket => {
+                players.forEach(socket => {
                     socket.emit('result', 'Draw!');
                     socket.removeAllListeners('play');
                 });
             }
             if (result === Tris.Result.WIN) {
-                confirmedSockets.forEach(socket => {
-                    if (socket.id === confirmedSockets[Tris.turn(game) - 1].id) {
+                players.forEach(socket => {
+                    if (socket.id === players[Tris.turn(game) - 1].id) {
                         socket.emit('result', 'You Win!');
                     }
                     else {
