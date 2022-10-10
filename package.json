@@ -4,8 +4,9 @@
   "description": "Tris over SocketIO",
   "main": "app.js",
   "scripts": {
-    "test": "npx nodemon out/app.js",
-    "start": "node out/app.js"
+    "build": "rm -rf ./out && tsc",
+    "test": "npm run build && npx nodemon out/app.js",
+    "start": "npm run build && node out/app.js"
   },
   "author": "Sasy00",
   "license": "ISC",
