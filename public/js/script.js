@@ -1,11 +1,12 @@
 const socket = io();
-const WIDTH = 400;
-const HEIGHT = 400;
+var WIDTH;
+var HEIGHT;
 
 window.onload = () => {
     const cvs = document.getElementById("game-canvas");
     const ctx = cvs.getContext("2d");
-    let mysign = null; //either drawX or drawO
+    WIDTH = cvs.width;
+    HEIGHT = cvs.height;
     var grid = [
         [0,0,0],
         [0,0,0],
